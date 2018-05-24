@@ -108,12 +108,15 @@ def hash_rows():
             if settings.vindb_use_hasher:
                 payload['hasher'] = settings.vindb_hasher
 
-            requests_post(
+            response = requests_post(
                 '{}/vindb/vin_records/create/'.format(settings.vindb_host),
                 data=json_dumps(payload),
                 headers={
                     'Content-Type': 'application/json'
                 }
             )
+
+            if response.status_code != 201:
+                raise Exception("Rows not created")
 
     return hashed_rows
