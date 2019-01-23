@@ -5,6 +5,7 @@ from django.test.signals import setting_changed
 
 
 DEFAULTS = {
+    'app_name': 'vinchain_database_hasher',
     'vehicle_model': ('path', 'model'),
     'vehicle_model_primary_key': 'id',
     'vehicle_model_vin_key': 'vin',
@@ -17,6 +18,10 @@ DEFAULTS = {
     'vindb_hasher': '',
     'vindb_host': '',
     'vindb_use_hasher': False,
+    'max_size_hashed_batch': 0,
+    'logstash_host': 'localhost',
+    'logstash_port': 5100,
+    'logging_version': 1,
 }
 
 
