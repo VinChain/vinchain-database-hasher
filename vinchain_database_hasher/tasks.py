@@ -146,8 +146,8 @@ def hash_rows(stop_flag):
 
             if response.status_code != 201: # error
                 extra['result'] = json_dumps({'status_code': response.status_code, 'response': response.text}),
-                _logger.error('%s:  %d rows processed unsuccessfully (ids %s-%s)', settings.app_name, len(records),
-                             records[0]['uuid'], records[-1]['uuid'], extra=extra)
+                _logger.error('%s:  %d rows processed unsuccessfully (ids %s-%s). Status code: %s. Error: "%s"', settings.app_name, len(records),
+                             records[0]['uuid'], records[-1]['uuid'], response.status_code, response.text, extra=extra)
                 raise Exception('Rows have not been stored in DB. Status code: {}. Error: "{}"'.format(
                     response.status_code, response.text)
                 )
