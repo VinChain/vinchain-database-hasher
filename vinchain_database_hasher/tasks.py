@@ -19,7 +19,7 @@ import logstash
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.INFO)
 _logger.addHandler(logstash.TCPLogstashHandler(settings.logstash_host, settings.logstash_port,
-                                                   message_type=settings.app_name, version=settings.logging_version))
+                                               message_type=settings.app_name, version=settings.logging_version))
 _logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
@@ -88,6 +88,9 @@ def hash_rows(stop_flag):
             have_new_rows = False
 
         for new_row in new_rows:
+            if new_row['vin'] is None:
+                continue
+
             latest_hashed = new_row[settings.vehicle_model_primary_key]
             hashed_rows += 1
 
@@ -141,40 +144,41 @@ def hash_rows(stop_flag):
                 'hash_functions': settings.vindb_hash_functions,
                 'latest_hashed_id': latest_hashed,
                 'latest_id': latest_id,
-                'success':  response.status_code == 201,
+                'success': response.status_code == 201,
             }
 
-            if response.status_code != 201: # error
+            if response.status_code != 201:  # error
                 extra['result'] = json_dumps({'status_code': response.status_code, 'response': response.text}),
-                _logger.error('%s:  %d rows processed unsuccessfully (ids %s-%s). Status code: %s. Error: "%s"', settings.app_name, len(records),
-                             records[0]['uuid'], records[-1]['uuid'], response.status_code, response.text, extra=extra)
+                _logger.error('%s:  %d rows processed unsuccessfully (ids %s-%s). Status code: %s. Error: "%s"',
+                              settings.app_name, len(records),
+                              records[0]['uuid'], records[-1]['uuid'], response.status_code, response.text, extra=extra)
                 raise Exception('Rows have not been stored in DB. Status code: {}. Error: "{}"'.format(
                     response.status_code, response.text)
                 )
 
             # success
             hashed_records = response.json()['records']
-            #check if all records stored in DB
+            # check if all records stored in DB
             rs = len(hashed_records) == len(records)
             extra.update(
                 {
-                'success': rs,
-                'hashed_rows': len(hashed_records),
-                'hashed_rows_ids': [r['uuid'] for r in hashed_records],
-                'tried_hash_rows_ids': [r['uuid'] for r in records] if not rs else None,
-                'result': json_dumps({'status_code': response.status_code}),
+                    'success': rs,
+                    'hashed_rows': len(hashed_records),
+                    'hashed_rows_ids': [r['uuid'] for r in hashed_records],
+                    'tried_hash_rows_ids': [r['uuid'] for r in records] if not rs else None,
+                    'result': json_dumps({'status_code': response.status_code}),
                 }
             )
             if rs:
                 _logger.info('%s: %d rows processed successfully (ids %s-%s)', settings.app_name, len(hashed_records),
                              hashed_records[0]['uuid'], hashed_records[-1]['uuid'], extra=extra)
             else:
-                _logger.error('%s: Not all rows have been stored in DB. '
-                             'Only %d from %d rows processed successfully (ids %s-%s)',
-                             settings.app_name, len(hashed_records), len(records),
-                             hashed_records[0]['uuid'], hashed_records[-1]['uuid'], extra=extra)
+                # _logger.error('%s: Not all rows have been stored in DB. '
+                #              'Only %d from %d rows processed successfully (ids %s-%s)',
+                #              settings.app_name, len(hashed_records), len(records),
+                #              hashed_records[0]['uuid'], hashed_records[-1]['uuid'], extra=extra)
                 raise Exception('Not all rows have been created. Status code: {}. Hashed rows ids: "{}". '
                                 'Tried to hash rows ids: "{}"'.format(response.status_code, extra['hashed_rows_ids'],
-                                                                   extra['tried_hash_rows_ids']))
+                                                                      extra['tried_hash_rows_ids']))
 
     return hashed_rows
