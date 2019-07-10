@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from json import (
     dumps as json_dumps,
 )
@@ -7,6 +7,7 @@ from requests import (
     post as requests_post,
 )
 
+from time import sleep
 from vinchainio.vinchain import VinChain
 from vinchain_hashing import hash_functions
 
@@ -15,6 +16,7 @@ from vinchain_database_hasher.conf import settings
 import sys
 import logging
 import logstash
+import re
 
 _logger = logging.getLogger(__name__)
 _logger.setLevel(logging.INFO)
@@ -54,9 +56,10 @@ def get_last_sent_id():
 
 
 def get_new_rows(model, latest_hashed_id, qty_rows):
+    dt = datetime.now() - timedelta(days=3)
     new_rows = list(
         model.objects.values().filter(
-            id__gt=latest_hashed_id
+            id__gt=latest_hashed_id, create_date__lt=dt
         ).order_by(settings.vehicle_model_primary_key)[:qty_rows]
     )
     return new_rows
@@ -72,6 +75,8 @@ def dummy_serializer(row):
 
 def hash_rows(stop_flag):
     latest_hashed = get_last_sent_id()
+
+    print(latest_hashed)
 
     have_new_rows = True
     hashed_rows = 0
@@ -89,6 +94,15 @@ def hash_rows(stop_flag):
 
         for new_row in new_rows:
             if new_row['vin'] is None:
+                continue
+
+            if len(new_row['vin']) > 17:
+                continue
+
+            # if new_row['create_date'] > datetime.now() - timedelta(days=3):
+            #     continue
+
+            if not re.match(r'^[a-zA-Z0-9\-]+$', new_row['vin']):
                 continue
 
             latest_hashed = new_row[settings.vehicle_model_primary_key]
@@ -173,12 +187,15 @@ def hash_rows(stop_flag):
                 _logger.info('%s: %d rows processed successfully (ids %s-%s)', settings.app_name, len(hashed_records),
                              hashed_records[0]['uuid'], hashed_records[-1]['uuid'], extra=extra)
             else:
+                _logger.info('%s: %d of %d rows processed successfully (ids %s-%s)', settings.app_name,
+                             len(hashed_records), len(records), hashed_records[0]['uuid'], hashed_records[-1]['uuid'],
+                             extra=extra)
                 # _logger.error('%s: Not all rows have been stored in DB. '
-                #              'Only %d from %d rows processed successfully (ids %s-%s)',
-                #              settings.app_name, len(hashed_records), len(records),
-                #              hashed_records[0]['uuid'], hashed_records[-1]['uuid'], extra=extra)
-                raise Exception('Not all rows have been created. Status code: {}. Hashed rows ids: "{}". '
-                                'Tried to hash rows ids: "{}"'.format(response.status_code, extra['hashed_rows_ids'],
-                                                                      extra['tried_hash_rows_ids']))
+                #               'Only %d from %d rows processed successfully (ids %s-%s)',
+                #               settings.app_name, len(hashed_records), len(records),
+                #               hashed_records[0]['uuid'], hashed_records[-1]['uuid'], extra=extra)
+                # raise Exception('Not all rows have been created. Status code: {}. Hashed rows ids: "{}". '
+                #                 'Tried to hash rows ids: "{}"'.format(response.status_code, extra['hashed_rows_ids'],
+                #                                                       extra['tried_hash_rows_ids']))
 
     return hashed_rows
