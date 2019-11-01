@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import time
 from json import (
     dumps as json_dumps,
 )
@@ -145,12 +146,14 @@ def hash_rows(stop_flag):
             if settings.vindb_use_hasher:
                 payload['hasher'] = settings.vindb_hasher
 
+            start_time = time.time()
+
             response = requests_post(
                 '{}/vindb/vin_records/create/'.format(settings.vindb_host),
                 data=json_dumps(payload),
                 headers={
                     'Content-Type': 'application/json'
-                }
+                }, timeout=120
             )
 
             extra = {
@@ -187,9 +190,11 @@ def hash_rows(stop_flag):
                 _logger.info('%s: %d rows processed successfully (ids %s-%s)', settings.app_name, len(hashed_records),
                              hashed_records[0]['uuid'], hashed_records[-1]['uuid'], extra=extra)
             else:
-                _logger.info('%s: %d of %d rows processed successfully (ids %s-%s)', settings.app_name,
-                             len(hashed_records), len(records), hashed_records[0]['uuid'], hashed_records[-1]['uuid'],
-                             extra=extra)
+                if len(hashed_records):
+                    _logger.info('%s: %d of %d rows processed successfully (ids %s-%s)', settings.app_name,
+                                 len(hashed_records), len(records), hashed_records[0]['uuid'],
+                                 hashed_records[-1]['uuid'],
+                                 extra=extra)
                 # _logger.error('%s: Not all rows have been stored in DB. '
                 #               'Only %d from %d rows processed successfully (ids %s-%s)',
                 #               settings.app_name, len(hashed_records), len(records),
@@ -197,5 +202,7 @@ def hash_rows(stop_flag):
                 # raise Exception('Not all rows have been created. Status code: {}. Hashed rows ids: "{}". '
                 #                 'Tried to hash rows ids: "{}"'.format(response.status_code, extra['hashed_rows_ids'],
                 #                                                       extra['tried_hash_rows_ids']))
+
+            _logger.info('--- %s seconds ---', (time.time() - start_time), extra=extra)
 
     return hashed_rows
