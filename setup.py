@@ -36,7 +36,7 @@ setup(
         'Topic :: Office/Business :: Financial',
     ],
     install_requires=[
-        "Django==2.0.4",
+        "Django==2.2.10",
         "requests==2.18.4",
     ],
     include_package_data=True,
