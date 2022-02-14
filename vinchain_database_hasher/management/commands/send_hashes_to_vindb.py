@@ -54,7 +54,7 @@ class Command(BaseCommand):
                     self.stdout.write('{}:  Hashed {} records'.format(
                         datetime.now().strftime('%Y-%m-%dT%H:%M:%S%Z'), hashed)
                     )
-                elif interval == options['interval']:
+                elif interval >= options['interval']:
                     interval = 0
                 else:
                     # Stop gracefully ticker
@@ -62,6 +62,7 @@ class Command(BaseCommand):
 
                 sleep(1)
         except Exception as e:
+            self.stdout.write(str(e))
             _logger.exception('%s: Exception. Application has stopped!!!', settings.app_name, extra=_logger_extra)
             raise e
 
