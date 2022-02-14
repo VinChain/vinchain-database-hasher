@@ -63,6 +63,36 @@ def get_new_rows(model, latest_hashed_id, qty_rows):
             id__gt=latest_hashed_id, create_date__lt=dt
         ).order_by(settings.vehicle_model_primary_key)[:qty_rows]
     )
+
+    for result in new_rows:
+        car_id = result['id']
+
+        try:
+            opt_data = list(TblCarsOptions.objects.filter(car_id=car_id).values())
+
+            if len(opt_data):
+                schema = OptionsSchema(many=True)
+                opt = schema.dump(opt_data).data
+                result['options'] = opt[0]['options']
+
+            eq_data = list(TblCarsEquipment.objects.filter(car_id=car_id).values())
+
+            if len(eq_data):
+                schema = EquipmentSchema(many=True)
+                eq = schema.dump(eq_data).data
+                result['equipment'] = eq[0]['equipment']
+
+            cr_data = list(TblCarsConditionReports.objects.filter(car_id=car_id).values())
+
+            if len(cr_data):
+                schema = ConditionSchema(many=True)
+                cr = schema.dump(cr_data).data
+                result['condition_report'] = cr[0]['reports']
+
+        except Exception as e:
+            print(e)
+
+    # print(new_rows[0])
     return new_rows
 
 
@@ -148,6 +178,8 @@ def hash_rows(stop_flag):
 
             start_time = time.time()
 
+            print(json_dumps(payload))
+
             response = requests_post(
                 '{}/vindb/vin_records/create/'.format(settings.vindb_host),
                 data=json_dumps(payload),
@@ -203,6 +235,6 @@ def hash_rows(stop_flag):
                 #                 'Tried to hash rows ids: "{}"'.format(response.status_code, extra['hashed_rows_ids'],
                 #                                                       extra['tried_hash_rows_ids']))
 
-            _logger.info('--- %s seconds ---', (time.time() - start_time), extra=extra)
+            print('--- {} seconds ---'.format(time.time() - start_time))
 
     return hashed_rows
