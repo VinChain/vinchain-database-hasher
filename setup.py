@@ -37,7 +37,7 @@ setup(
     ],
     install_requires=[
         "Django==2.0.4",
-        "requests==2.18.4",
+        "requests==2.31.0",
     ],
     include_package_data=True,
 )
